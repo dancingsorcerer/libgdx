@@ -66,7 +66,13 @@ public class AndroidFileHandle extends FileHandle {
 		return new AndroidFileHandle(assets, parent, type);
 	}
 
-	public InputStream read () {
+	// @DSG:PMS -- Changed exposure from public to protected and changed
+	//			   name from read to openReadStream.  Read was 
+	//			   re-implemented in the base class (FileHandle.java) to 
+	//			   call this method, wrap it using the abstract interface
+	//			   FileInputStreamProcessor if set, then return.  See
+	//			   FileHandle.java for more details.
+	protected InputStream openReadStream () {
 		if (type == FileType.Internal) {
 			try {
 				return assets.open(file.getPath());
@@ -74,7 +80,8 @@ public class AndroidFileHandle extends FileHandle {
 				throw new GdxRuntimeException("Error reading file: " + file + " (" + type + ")", ex);
 			}
 		}
-		return super.read();
+		// @DSG:PMS -- Renamed from read to openReadStream (see above).
+		return super.openReadStream();
 	}
 
 	public FileHandle[] list () {

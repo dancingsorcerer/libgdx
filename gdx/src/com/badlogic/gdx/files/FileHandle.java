@@ -47,6 +47,10 @@ import java.io.Writer;
 public class FileHandle {
 	protected File file;
 	protected FileType type;
+	
+	// @DSG:PMS -- Added reference to processor for processing input streams.
+	protected static FileHandleInputStreamProcessor streamProcessor;
+	// @DSG:PMS --- End.
 
 	protected FileHandle () {
 	}
@@ -122,10 +126,32 @@ public class FileHandle {
 		if (type == FileType.External) return new File(Gdx.files.getExternalStoragePath(), file.getPath());
 		return file;
 	}
+	
+	// @DSG:PMS -- Added public setter method for stream processor.
+	public static void setFileHandleInputStreamProcessor(FileHandleInputStreamProcessor processor) {
+		FileHandle.streamProcessor = processor;
+	}
+	// @DSG:PMS -- End.
 
 	/** Returns a stream for reading this file as bytes.
 	 * @throws GdxRuntimeException if the file handle represents a directory, doesn't exist, or could not be read. */
-	public InputStream read () {
+	 public InputStream read () {
+	 	// @DSG:PMS -- Abstracted body of this method into openReadStream below.
+		//			   This allows us to apply the FileInputStreamProcessor 
+		//			   before returning.
+		InputStream stream = this.openReadStream();
+		if (FileHandle.streamProcessor != null)
+			stream = FileHandle.streamProcessor.process(this, stream);
+		return stream;
+		// @DSG:PMS -- End.
+	}
+
+	// @DSG:PMS -- Abstracted body of read() method into openReadStream() which
+	//			   returns the InputStream object.  This allows us to wrap that
+	//			   InputStream using our injected FileInputStreamProcessor API
+	//			   before returning it to the caller.  Otherwise, the body of
+	//			   of openReadStream() is identical to the former body of read().
+	protected InputStream openReadStream () {
 		if (type == FileType.Classpath || (type == FileType.Internal && !file.exists())
 			|| (type == FileType.Local && !file.exists())) {
 			InputStream input = FileHandle.class.getResourceAsStream("/" + file.getPath().replace('\\', '/'));
@@ -140,6 +166,7 @@ public class FileHandle {
 			throw new GdxRuntimeException("Error reading file: " + file + " (" + type + ")", ex);
 		}
 	}
+	// @DSG:PMS -- End.
 
 	/** Returns a buffered stream for reading this file as bytes.
 	 * @throws GdxRuntimeException if the file handle represents a directory, doesn't exist, or could not be read. */
