@@ -136,7 +136,6 @@ public class FileHandle {
 
 	/** Returns a stream for reading this file as bytes.
 	 * @throws GdxRuntimeException if the file handle represents a directory, doesn't exist, or could not be read. */
-<<<<<<< HEAD
 	 public InputStream read () {
 	 	// @DSG:PMS -- Abstracted body of this method into openReadStream below.
 		//			   This allows us to apply the FileInputStreamProcessor 
@@ -154,13 +153,8 @@ public class FileHandle {
 	//			   before returning it to the caller.  Otherwise, the body of
 	//			   of openReadStream() is identical to the former body of read().
 	protected InputStream openReadStream () {
-		if (type == FileType.Classpath || (type == FileType.Internal && !file.exists())
-			|| (type == FileType.Local && !file.exists())) {
-=======
-	public InputStream read () {
 		if (type == FileType.Classpath || (type == FileType.Internal && !file().exists())
 			|| (type == FileType.Local && !file().exists())) {
->>>>>>> upstream/master
 			InputStream input = FileHandle.class.getResourceAsStream("/" + file.getPath().replace('\\', '/'));
 			if (input == null) throw new GdxRuntimeException("File not found: " + file + " (" + type + ")");
 			return input;
