@@ -56,10 +56,7 @@ public class JsonReader implements BaseJsonReader {
 		} catch (IOException ex) {
 			throw new SerializationException(ex);
 		} finally {
-			try {
-				reader.close();
-			} catch (IOException ignored) {
-			}
+			StreamUtils.closeQuietly(reader);
 		}
 	}
 
@@ -70,17 +67,14 @@ public class JsonReader implements BaseJsonReader {
 		} catch (IOException ex) {
 			throw new SerializationException(ex);
 		} finally {
-			try {
-				input.close();
-			} catch (IOException ignored) {
-			}
+			StreamUtils.closeQuietly(input);
 		}
 	}
 
 	@Override
 	public JsonValue parse (FileHandle file) {
 		try {
-			return parse(file.read());
+			return parse(file.reader("UTF-8"));
 		} catch (Exception ex) {
 			throw new SerializationException("Error parsing file: " + file, ex);
 		}
@@ -600,8 +594,11 @@ public class JsonReader implements BaseJsonReader {
 		} else if (current.isArray() || current.isObject()) {
 			if (current.size == 0)
 				current.child = child;
-			else
-				lastChild.pop().next = child;
+			else {
+				JsonValue last = lastChild.pop();
+				last.next = child;
+				child.prev = last;
+			}
 			lastChild.add(child);
 			current.size++;
 		} else

@@ -1,10 +1,26 @@
+/*******************************************************************************
+ * Copyright 2011 See AUTHORS file.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ ******************************************************************************/
+
 package com.badlogic.gdx.graphics.g3d.utils;
 
 import java.util.Comparator;
 
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.g3d.Renderable;
-import com.badlogic.gdx.graphics.g3d.materials.BlendingAttribute;
+import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 
@@ -21,8 +37,10 @@ public class DefaultRenderableSorter implements RenderableSorter, Comparator<Ren
 	
 	@Override
 	public int compare (final Renderable o1, final Renderable o2) {
-		final boolean b1 = o1.material.has(BlendingAttribute.Type);
-		final boolean b2 = o2.material.has(BlendingAttribute.Type);
+		final boolean b1 = o1.material.has(BlendingAttribute.Type) ? 
+			((BlendingAttribute)o1.material.get(BlendingAttribute.Type)).blended : false;
+		final boolean b2 = o2.material.has(BlendingAttribute.Type) ?
+			((BlendingAttribute)o2.material.get(BlendingAttribute.Type)).blended : false;
 		if (b1 != b2) 
 			return b1 ? 1 : -1;
 		// FIXME implement better sorting algorithm
@@ -31,6 +49,7 @@ public class DefaultRenderableSorter implements RenderableSorter, Comparator<Ren
 		o1.worldTransform.getTranslation(tmpV1);
 		o2.worldTransform.getTranslation(tmpV2);
 		final float dst = camera.position.dst2(tmpV1) - camera.position.dst2(tmpV2);
-		return dst < 0f ? -1 : (dst > 0f ? 1 : 0);
+		final int result = dst < 0f ? -1 : (dst > 0f ? 1 : 0);
+		return b1 ? -result : result;
 	}
 }

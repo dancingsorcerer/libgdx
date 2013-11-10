@@ -1,3 +1,19 @@
+/*******************************************************************************
+ * Copyright 2011 See AUTHORS file.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ ******************************************************************************/
+
 package com.badlogic.gdx.tests.g3d;
 
 import com.badlogic.gdx.Gdx;
@@ -6,17 +22,16 @@ import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.GL10;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.VertexAttributes.Usage;
+import com.badlogic.gdx.graphics.g3d.Attribute;
+import com.badlogic.gdx.graphics.g3d.Environment;
+import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.graphics.g3d.Renderable;
 import com.badlogic.gdx.graphics.g3d.Shader;
-import com.badlogic.gdx.graphics.g3d.lights.DirectionalLight;
-import com.badlogic.gdx.graphics.g3d.lights.Lights;
-import com.badlogic.gdx.graphics.g3d.materials.Material;
-import com.badlogic.gdx.graphics.g3d.materials.Material.Attribute;
+import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.shaders.BaseShader;
-import com.badlogic.gdx.graphics.g3d.shaders.BaseShader.Input;
 import com.badlogic.gdx.graphics.g3d.utils.BaseShaderProvider;
 import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
@@ -27,7 +42,7 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.GdxRuntimeException;
 
 public class ShaderTest extends GdxTest {
-	public static class TestAttribute extends Material.Attribute {
+	public static class TestAttribute extends Attribute {
 		public final static String Alias = "Test";
 		public final static long ID = register(Alias);
 		
@@ -66,9 +81,9 @@ public class ShaderTest extends GdxTest {
 			"	gl_FragColor.rgb = vec3(v_test);\n" +
 			"}\n";
 		
-		protected final Input u_projTrans	= register(new Input(GLOBAL_UNIFORM, "u_projTrans"));
-		protected final Input u_worldTrans	= register(new Input(GLOBAL_UNIFORM, "u_worldTrans"));
-		protected final Input u_test			= register(new Input(GLOBAL_UNIFORM, "u_test"));
+		protected final int u_projTrans	= register(new Uniform("u_projTrans"));
+		protected final int u_worldTrans	= register(new Uniform("u_worldTrans"));
+		protected final int u_test			= register(new Uniform("u_test"));
 		
 		protected final ShaderProgram program;
 		
@@ -81,7 +96,7 @@ public class ShaderTest extends GdxTest {
 		
 		@Override
 		public void init () {
-			super.init(program, 0, 0, 0);
+			super.init(program, null);
 		}
 		
 		@Override

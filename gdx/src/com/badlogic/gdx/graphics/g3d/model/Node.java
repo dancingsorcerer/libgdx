@@ -1,7 +1,23 @@
+/*******************************************************************************
+ * Copyright 2011 See AUTHORS file.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ ******************************************************************************/
+
 package com.badlogic.gdx.graphics.g3d.model;
 
+import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.graphics.g3d.Model;
-import com.badlogic.gdx.graphics.g3d.materials.Material;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Quaternion;
 import com.badlogic.gdx.math.Vector3;
@@ -34,7 +50,7 @@ public class Node {
 	public final Matrix4 localTransform = new Matrix4();
 	/** the global transform, product of local transform and transform of the parent node, calculated via {@link #calculateWorldTransform()}**/
 	public final Matrix4 globalTransform = new Matrix4();
-	
+
 	public Array<NodePart> parts = new Array<NodePart>(2);
 	
 	/**
@@ -95,7 +111,7 @@ public class Node {
 			}
 		}
 	}
-	
+
 	/** Calculate the bounding box of this Node.
 	 * This is a potential slow operation, it is advised to cache the result. */
 	public BoundingBox calculateBoundingBox(final BoundingBox out) {
@@ -103,13 +119,29 @@ public class Node {
 		return extendBoundingBox(out);
 	}
 	
+	/** Calculate the bounding box of this Node.
+	 * This is a potential slow operation, it is advised to cache the result. */
+	public BoundingBox calculateBoundingBox(final BoundingBox out, boolean transform) {
+		out.inf();
+		return extendBoundingBox(out, transform);
+	}
+
 	/** Extends the bounding box with the bounds of this Node.
 	 * This is a potential slow operation, it is advised to cache the result. */
 	public BoundingBox extendBoundingBox(final BoundingBox out) {
+		return extendBoundingBox(out, true);
+	}
+	
+	/** Extends the bounding box with the bounds of this Node.
+	 * This is a potential slow operation, it is advised to cache the result. */
+	public BoundingBox extendBoundingBox(final BoundingBox out, boolean transform) {
 		final int partCount = parts.size;
 		for (int i = 0; i < partCount; i++) {
 			final MeshPart meshPart = parts.get(i).meshPart;
-			meshPart.mesh.extendBoundingBox(out, meshPart.indexOffset, meshPart.numVertices, globalTransform);
+			if (transform)
+				meshPart.mesh.extendBoundingBox(out, meshPart.indexOffset, meshPart.numVertices, globalTransform);
+			else
+				meshPart.mesh.extendBoundingBox(out, meshPart.indexOffset, meshPart.numVertices);
 		}
 		final int childCount = children.size;
 		for (int i = 0; i < childCount; i++)

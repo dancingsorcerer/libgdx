@@ -16,6 +16,16 @@
 
 package com.badlogic.gdx.tools.imagepacker;
 
+import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.graphics.Pixmap.Format;
+import com.badlogic.gdx.graphics.Texture.TextureFilter;
+import com.badlogic.gdx.graphics.Texture.TextureWrap;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas.TextureAtlasData;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas.TextureAtlasData.Region;
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.GdxRuntimeException;
+
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
@@ -31,16 +41,6 @@ import javax.imageio.ImageIO;
 import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
 import javax.imageio.stream.ImageOutputStream;
-
-import com.badlogic.gdx.files.FileHandle;
-import com.badlogic.gdx.graphics.Pixmap.Format;
-import com.badlogic.gdx.graphics.Texture.TextureFilter;
-import com.badlogic.gdx.graphics.Texture.TextureWrap;
-import com.badlogic.gdx.graphics.g2d.TextureAtlas.TextureAtlasData;
-import com.badlogic.gdx.graphics.g2d.TextureAtlas.TextureAtlasData.Region;
-import com.badlogic.gdx.math.MathUtils;
-import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.GdxRuntimeException;
 
 /** @author Nathan Sweet */
 public class TexturePacker2 {
@@ -139,7 +139,7 @@ public class TexturePacker2 {
 			System.out.println("Writing " + canvas.getWidth() + "x" + canvas.getHeight() + ": " + outputFile);
 
 			for (Rect rect : page.outputRects) {
-				BufferedImage image = rect.image;
+				BufferedImage image = rect.getImage(imageProcessor);
 				int iw = image.getWidth();
 				int ih = image.getHeight();
 				int rectX = page.x + rect.x, rectY = page.y + page.height - rect.y - rect.height;
@@ -197,6 +197,11 @@ public class TexturePacker2 {
 				}
 			}
 
+			if (settings.bleed && !settings.premultiplyAlpha && !settings.outputFormat.equalsIgnoreCase("jpg")) {
+				canvas = new ColorBleedEffect().processImage(canvas, 2);
+				g = (Graphics2D)canvas.getGraphics();
+			}
+
 			if (settings.debug) {
 				g.setColor(Color.magenta);
 				g.drawRect(0, 0, width - 1, height - 1);
@@ -234,25 +239,19 @@ public class TexturePacker2 {
 		}
 	}
 
-	private static void plot (BufferedImage dst, int x, int y, int argb) {
-		if (0 <= x && x < dst.getWidth() && 0 <= y && y < dst.getHeight()) {
-			dst.setRGB(x, y, argb);
-		}
+	static private void plot (BufferedImage dst, int x, int y, int argb) {
+		if (0 <= x && x < dst.getWidth() && 0 <= y && y < dst.getHeight()) dst.setRGB(x, y, argb);
 	}
 
-	private static void copy (BufferedImage src, int x, int y, int w, int h, BufferedImage dst, int dx, int dy, boolean rotated) {
+	static private void copy (BufferedImage src, int x, int y, int w, int h, BufferedImage dst, int dx, int dy, boolean rotated) {
 		if (rotated) {
-			for (int i = 0; i < w; i++) {
-				for (int j = 0; j < h; j++) {
+			for (int i = 0; i < w; i++)
+				for (int j = 0; j < h; j++)
 					dst.setRGB(dx + j, dy + w - i - 1, src.getRGB(x + i, y + j));
-				}
-			}
 		} else {
-			for (int i = 0; i < w; i++) {
-				for (int j = 0; j < h; j++) {
+			for (int i = 0; i < w; i++)
+				for (int j = 0; j < h; j++)
 					dst.setRGB(dx + i, dy + j, src.getRGB(x + i, y + j));
-				}
-			}
 		}
 	}
 
@@ -276,8 +275,6 @@ public class TexturePacker2 {
 		}
 
 		FileWriter writer = new FileWriter(packFile, true);
-// if (settings.jsonOutput) {
-// } else {
 		for (Page page : pages) {
 			writer.write("\n" + page.imageName + "\n");
 			writer.write("format: " + settings.format + "\n");
@@ -294,7 +291,6 @@ public class TexturePacker2 {
 				}
 			}
 		}
-// }
 		writer.close();
 	}
 
@@ -302,17 +298,18 @@ public class TexturePacker2 {
 		writer.write(Rect.getAtlasName(name, settings.flattenPaths) + "\n");
 		writer.write("  rotate: " + rect.rotated + "\n");
 		writer.write("  xy: " + (page.x + rect.x) + ", " + (page.y + page.height - rect.height - rect.y) + "\n");
-		writer.write("  size: " + rect.image.getWidth() + ", " + rect.image.getHeight() + "\n");
+
+		writer.write("  size: " + rect.regionWidth + ", " + rect.regionHeight + "\n");
 		if (rect.splits != null) {
-			writer
-				.write("  split: " + rect.splits[0] + ", " + rect.splits[1] + ", " + rect.splits[2] + ", " + rect.splits[3] + "\n");
+			writer.write("  split: " //
+				+ rect.splits[0] + ", " + rect.splits[1] + ", " + rect.splits[2] + ", " + rect.splits[3] + "\n");
 		}
 		if (rect.pads != null) {
 			if (rect.splits == null) writer.write("  split: 0, 0, 0, 0\n");
 			writer.write("  pad: " + rect.pads[0] + ", " + rect.pads[1] + ", " + rect.pads[2] + ", " + rect.pads[3] + "\n");
 		}
 		writer.write("  orig: " + rect.originalWidth + ", " + rect.originalHeight + "\n");
-		writer.write("  offset: " + rect.offsetX + ", " + (rect.originalHeight - rect.image.getHeight() - rect.offsetY) + "\n");
+		writer.write("  offset: " + rect.offsetX + ", " + (rect.originalHeight - rect.regionHeight - rect.offsetY) + "\n");
 		writer.write("  index: " + rect.index + "\n");
 	}
 
@@ -339,7 +336,7 @@ public class TexturePacker2 {
 	}
 
 	/** @author Nathan Sweet */
-	public static class Page {
+	static public class Page {
 		public String imageName;
 		public Array<Rect> outputRects, remainingRects;
 		public float occupancy;
@@ -348,17 +345,22 @@ public class TexturePacker2 {
 
 	/** @author Regnarock
 	 * @author Nathan Sweet */
-	public static class Alias {
+	static public class Alias {
 		public String name;
 		public int index;
 		public int[] splits;
 		public int[] pads;
+		public int offsetX, offsetY, originalWidth, originalHeight;
 
 		public Alias (Rect rect) {
 			name = rect.name;
 			index = rect.index;
 			splits = rect.splits;
 			pads = rect.pads;
+			offsetX = rect.offsetX;
+			offsetY = rect.offsetY;
+			originalWidth = rect.originalWidth;
+			originalHeight = rect.originalHeight;
 		}
 
 		public void apply (Rect rect) {
@@ -366,15 +368,18 @@ public class TexturePacker2 {
 			rect.index = index;
 			rect.splits = splits;
 			rect.pads = pads;
+			rect.offsetX = offsetX;
+			rect.offsetY = offsetY;
+			rect.originalWidth = originalWidth;
+			rect.originalHeight = originalHeight;
 		}
 	}
 
 	/** @author Nathan Sweet */
-	public static class Rect {
+	static public class Rect {
 		public String name;
-		public BufferedImage image;
-		public int offsetX, offsetY, originalWidth, originalHeight;
-		public int x, y, width, height;
+		public int offsetX, offsetY, regionWidth, regionHeight, originalWidth, originalHeight;
+		public int x, y, width, height; // Portion of page taken by this region, including padding.
 		public int index;
 		public boolean rotated;
 		public Set<Alias> aliases = new HashSet<Alias>();
@@ -382,27 +387,50 @@ public class TexturePacker2 {
 		public int[] pads;
 		public boolean canRotate = true;
 
+		private boolean isPatch;
+		private BufferedImage image;
+		private File file;
 		int score1, score2;
 
-		Rect (BufferedImage source, int left, int top, int newWidth, int newHeight) {
+		Rect (BufferedImage source, int left, int top, int newWidth, int newHeight, boolean isPatch) {
 			image = new BufferedImage(source.getColorModel(), source.getRaster().createWritableChild(left, top, newWidth, newHeight,
 				0, 0, null), source.getColorModel().isAlphaPremultiplied(), null);
 			offsetX = left;
 			offsetY = top;
+			regionWidth = newWidth;
+			regionHeight = newHeight;
 			originalWidth = source.getWidth();
 			originalHeight = source.getHeight();
 			width = newWidth;
 			height = newHeight;
+			this.isPatch = isPatch;
+		}
+
+		/** Clears the image for this rect, which will be loaded from the specified file by {@link #getImage(ImageProcessor)}. */
+		public void unloadImage (File file) {
+			this.file = file;
+			image = null;
+		}
+
+		public BufferedImage getImage (ImageProcessor imageProcessor) {
+			if (image != null) return image;
+
+			BufferedImage image;
+			try {
+				image = ImageIO.read(file);
+			} catch (IOException ex) {
+				throw new RuntimeException("Error reading image: " + file, ex);
+			}
+			if (image == null) throw new RuntimeException("Unable to read image: " + file);
+			String name = this.name;
+			if (isPatch) name += ".9";
+			return imageProcessor.processImage(image, name).getImage(null);
 		}
 
 		Rect () {
 		}
 
 		Rect (Rect rect) {
-			setSize(rect);
-		}
-
-		void setSize (Rect rect) {
 			x = rect.x;
 			y = rect.y;
 			width = rect.width;
@@ -414,6 +442,8 @@ public class TexturePacker2 {
 			image = rect.image;
 			offsetX = rect.offsetX;
 			offsetY = rect.offsetY;
+			regionWidth = rect.regionWidth;
+			regionHeight = rect.regionHeight;
 			originalWidth = rect.originalWidth;
 			originalHeight = rect.originalHeight;
 			x = rect.x;
@@ -428,6 +458,8 @@ public class TexturePacker2 {
 			canRotate = rect.canRotate;
 			score1 = rect.score1;
 			score2 = rect.score2;
+			file = rect.file;
+			isPatch = rect.isPatch;
 		}
 
 		@Override
@@ -457,7 +489,7 @@ public class TexturePacker2 {
 		public boolean pot = true;
 		public int paddingX = 2, paddingY = 2;
 		public boolean edgePadding = true;
-		public boolean duplicatePadding = true;
+		public boolean duplicatePadding = false;
 		public boolean rotation;
 		public int minWidth = 16, minHeight = 16;
 		public int maxWidth = 1024, maxHeight = 1024;
@@ -477,6 +509,8 @@ public class TexturePacker2 {
 		public boolean flattenPaths;
 		public boolean premultiplyAlpha;
 		public boolean useIndexes = true;
+		public boolean bleed = true;
+		public boolean limitMemory = true;
 
 		public Settings () {
 		}
@@ -492,6 +526,7 @@ public class TexturePacker2 {
 			paddingX = settings.paddingX;
 			paddingY = settings.paddingY;
 			edgePadding = settings.edgePadding;
+			duplicatePadding = settings.duplicatePadding;
 			alphaThreshold = settings.alphaThreshold;
 			ignoreBlankImages = settings.ignoreBlankImages;
 			stripWhitespaceX = settings.stripWhitespaceX;
@@ -504,14 +539,19 @@ public class TexturePacker2 {
 			filterMag = settings.filterMag;
 			wrapX = settings.wrapX;
 			wrapY = settings.wrapY;
-			duplicatePadding = settings.duplicatePadding;
 			debug = settings.debug;
 			combineSubdirectories = settings.combineSubdirectories;
 			flattenPaths = settings.flattenPaths;
 			premultiplyAlpha = settings.premultiplyAlpha;
+			forceSquareOutput = settings.forceSquareOutput;
+			useIndexes = settings.useIndexes;
+			bleed = settings.bleed;
+			limitMemory = settings.limitMemory;
 		}
 	}
 
+	/** Packs using defaults settings.
+	 * @see TexturePacker2#process(Settings, String, String, String) */
 	static public void process (String input, String output, String packFileName) {
 		try {
 			new TexturePackerFileProcessor(new Settings(), packFileName).process(new File(input), new File(output));
@@ -520,6 +560,9 @@ public class TexturePacker2 {
 		}
 	}
 
+	/** @param input Directory containing individual images to be packed.
+	 * @param output Directory where the pack file and page images will be written.
+	 * @param packFileName The name of the pack file. Also used to name the page images. */
 	static public void process (Settings settings, String input, String output, String packFileName) {
 		try {
 			new TexturePackerFileProcessor(settings, packFileName).process(new File(input), new File(output));
@@ -550,7 +593,7 @@ public class TexturePacker2 {
 		if (isModified(input, output, packFileName)) process(settings, input, output, packFileName);
 	}
 
-	public static void main (String[] args) throws Exception {
+	static public void main (String[] args) throws Exception {
 		String input = null, output = null, packFileName = "pack.atlas";
 
 		switch (args.length) {

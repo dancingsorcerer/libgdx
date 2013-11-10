@@ -1,3 +1,19 @@
+/*******************************************************************************
+ * Copyright 2011 See AUTHORS file.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ ******************************************************************************/
+
 package com.badlogic.gdx.maps.tiled;
 
 import java.io.ByteArrayInputStream;
@@ -114,10 +130,9 @@ public class TmxMapLoader extends AsynchronousAssetLoader<TiledMap, TmxMapLoader
 	}
 
 	@Override
-	public void loadAsync (AssetManager manager, String fileName, TmxMapLoader.Parameters parameter) {
+	public void loadAsync (AssetManager manager, String fileName, FileHandle tmxFile, TmxMapLoader.Parameters parameter) {
 		map = null;
 
-		FileHandle tmxFile = resolve(fileName);
 		if (parameter != null) {
 			yUp = parameter.yUp;
 		} else {
@@ -131,7 +146,7 @@ public class TmxMapLoader extends AsynchronousAssetLoader<TiledMap, TmxMapLoader
 	}
 
 	@Override
-	public TiledMap loadSync (AssetManager manager, String fileName, TmxMapLoader.Parameters parameter) {
+	public TiledMap loadSync (AssetManager manager, String fileName, FileHandle file, TmxMapLoader.Parameters parameter) {
 		return map;
 	}
 
@@ -141,10 +156,9 @@ public class TmxMapLoader extends AsynchronousAssetLoader<TiledMap, TmxMapLoader
 	 * @param parameter not used for now
 	 * @return dependencies for the given .tmx file */
 	@Override
-	public Array<AssetDescriptor> getDependencies (String fileName, Parameters parameter) {
+	public Array<AssetDescriptor> getDependencies (String fileName, FileHandle tmxFile, Parameters parameter) {
 		Array<AssetDescriptor> dependencies = new Array<AssetDescriptor>();
 		try {
-			FileHandle tmxFile = resolve(fileName);
 			root = xml.parse(tmxFile);
 			boolean generateMipMaps = (parameter != null ? parameter.generateMipMaps : false);
 			TextureLoader.TextureParameter texParams = new TextureParameter();
@@ -154,7 +168,7 @@ public class TmxMapLoader extends AsynchronousAssetLoader<TiledMap, TmxMapLoader
 				texParams.magFilter = parameter.textureMagFilter;
 			}
 			for (FileHandle image : loadTilesets(root, tmxFile)) {
-				dependencies.add(new AssetDescriptor(image.path(), Texture.class, texParams));
+				dependencies.add(new AssetDescriptor(image, Texture.class, texParams));
 			}
 			return dependencies;
 		} catch (IOException e) {

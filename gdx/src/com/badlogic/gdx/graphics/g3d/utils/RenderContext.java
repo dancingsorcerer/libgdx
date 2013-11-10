@@ -1,3 +1,19 @@
+/*******************************************************************************
+ * Copyright 2011 See AUTHORS file.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ ******************************************************************************/
+
 package com.badlogic.gdx.graphics.g3d.utils;
 
 import com.badlogic.gdx.Gdx;
@@ -16,8 +32,10 @@ public class RenderContext {
 	private boolean blending;
 	private int blendSFactor;
 	private int blendDFactor;
-	private boolean depthTest;
 	private int depthFunc;
+	private float depthRangeNear;
+	private float depthRangeFar;
+	private boolean depthMask;
 	private int cullFace;
 	
 	public RenderContext(TextureBinder textures) {
@@ -30,11 +48,11 @@ public class RenderContext {
 	 */
 	public final void begin() {
 		Gdx.gl.glDisable(GL10.GL_DEPTH_TEST);
-		depthTest = false;
+		depthFunc = 0;
 		Gdx.gl.glDisable(GL10.GL_BLEND);
 		blending = false;
 		Gdx.gl.glDisable(GL10.GL_CULL_FACE);
-		cullFace = blendSFactor = blendDFactor = depthFunc = 0;
+		cullFace = blendSFactor = blendDFactor;
 		textureBinder.begin();
 	}
 	
@@ -42,23 +60,38 @@ public class RenderContext {
 	 * Resest all changed OpenGL states to their defaults.
 	 */
 	public final void end() {
-		if(depthTest) Gdx.gl.glDisable(GL10.GL_DEPTH_TEST);
+		if(depthFunc != 0) Gdx.gl.glDisable(GL10.GL_DEPTH_TEST);
+		if (!depthMask) Gdx.gl.glDepthMask(true);
 		if(blending) Gdx.gl.glDisable(GL10.GL_BLEND);
 		if(cullFace>0) Gdx.gl.glDisable(GL10.GL_CULL_FACE);
 		textureBinder.end();
 	}
 	
-	public final void setDepthTest(final boolean enabled, final int depthFunction) {
-		if (enabled != depthTest) {
-			depthTest = enabled;
-			if (enabled)
+	public final void setDepthMask(final boolean depthMask) {
+		if (this.depthMask != depthMask)
+			Gdx.gl.glDepthMask(this.depthMask = depthMask);
+	}
+	
+	public final void setDepthTest(final int depthFunction) {
+		setDepthTest(depthFunction, 0f, 1f);
+	}
+	
+	public final void setDepthTest(final int depthFunction, final float depthRangeNear, final float depthRangeFar) {
+		final boolean wasEnabled = depthFunc != 0;
+		final boolean enabled = depthFunction != 0;
+		if (depthFunc != depthFunction) {
+			depthFunc = depthFunction;
+			if (enabled) {
 				Gdx.gl.glEnable(GL10.GL_DEPTH_TEST);
-			else
+				Gdx.gl.glDepthFunc(depthFunction);
+			} else
 				Gdx.gl.glDisable(GL10.GL_DEPTH_TEST);
 		}
-		if (enabled && depthFunc != depthFunction) {
-			Gdx.gl.glDepthFunc(depthFunction);
-			depthFunc = depthFunction;
+		if (enabled) {
+			if (!wasEnabled || depthFunc != depthFunction)
+				Gdx.gl.glDepthFunc(depthFunc = depthFunction);
+			if (!wasEnabled || this.depthRangeNear != depthRangeNear || this.depthRangeFar != depthRangeFar)
+				Gdx.gl.glDepthRangef(this.depthRangeNear = depthRangeNear, this.depthRangeFar = depthRangeFar);
 		}
 	}
 	
