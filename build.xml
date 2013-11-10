@@ -122,17 +122,6 @@
 			<reference refid="classpath"/>
 		</ant>
 	</target>
-
-	<!-- vdx robovm backend -->
-	<target name="gdx-backend-robovm" depends="gdx-core">
-		<path id="classpath">
-			<pathelement location="${distDir}/gdx.jar"/>
-		</path>
-		<ant antfile="../../build-template.xml" dir="backends/gdx-backend-robovm">
-			<property name="jar" value="gdx-backend-robovm"/>
-			<reference refid="classpath"/>
-		</ant>
-	</target>
     
     <!-- gdx robovm backend -->
     <target name="gdx-backend-robovm" depends="gdx-core">
@@ -330,7 +319,7 @@
 			<fileset dir="backends" includes="gdx-backend-android/src/com/badlogic/gdx/backends/android/AndroidApplicationConfiguration.java"/>
 			<fileset dir="backends" includes="gdx-backends-gwt/src/com/badlogic/gdx/backends/gwt/GwtApplication.java"/>
 			<fileset dir="backends" includes="gdx-backends-gwt/src/com/badlogic/gdx/backends/gwt/GwtApplicationConfiguration.java"/>
-            <fileset dir="backends" includes="gdx-backend-robovm/src/com/badlogic/gdx/backends/iosrobovm/IOSApplication.java"/>
+			<fileset dir="backends" includes="gdx-backend-robovm/src/com/badlogic/gdx/backends/iosrobovm/IOSApplication.java"/>
 			<fileset dir="backends" includes="gdx-backend-robovm/src/com/badlogic/gdx/backends/iosrobovm/IOSApplicationConfiguration.java"/>
 		</javadoc>
 	</target>
