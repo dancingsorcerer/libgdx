@@ -17,7 +17,7 @@
 package com.badlogic.gdx.math;
 
 /** Encapsulates a 2D polygon defined by it's vertices relative to an origin point (default of 0, 0). */
-public class Polygon {
+public class Polygon implements Shape2D {
 	private float[] localVertices;
 	private float[] worldVertices;
 	private float x, y;
@@ -115,15 +115,7 @@ public class Polygon {
 	 * @throws IllegalArgumentException if less than 6 elements, representing 3 points, are provided */
 	public void setVertices (float[] vertices) {
 		if (vertices.length < 6) throw new IllegalArgumentException("polygons must contain at least 3 points.");
-
-		// if the provided vertices are the same length, we can copy them into localVertices
-		if (localVertices.length == vertices.length) {
-			for (int i = 0; i < localVertices.length; i++) {
-				localVertices[i] = vertices[i];
-			}
-		} else {
-			localVertices = vertices;
-		}
+		localVertices = vertices;
 		dirty = true;
 	}
 
@@ -167,23 +159,8 @@ public class Polygon {
 
 	/** Returns the area contained within the polygon. */
 	public float area () {
-		float area = 0;
-
 		float[] vertices = getTransformedVertices();
-		final int numFloats = vertices.length;
-
-		int x1, y1, x2, y2;
-		for (int i = 0; i < numFloats; i += 2) {
-			x1 = i;
-			y1 = i + 1;
-			x2 = (i + 2) % numFloats;
-			y2 = (i + 3) % numFloats;
-
-			area += vertices[x1] * vertices[y2];
-			area -= vertices[x2] * vertices[y1];
-		}
-		area *= 0.5f;
-		return area;
+		return GeometryUtils.polygonArea(vertices, 0, vertices.length);
 	}
 
 	/** Returns an axis-aligned bounding box of this polygon.

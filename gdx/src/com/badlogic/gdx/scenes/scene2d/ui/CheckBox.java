@@ -17,8 +17,8 @@
 package com.badlogic.gdx.scenes.scene2d.ui;
 
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.utils.Align;
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
 
@@ -26,6 +26,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
  * @author Nathan Sweet */
 public class CheckBox extends TextButton {
 	private Image image;
+	private Cell imageCell;
 	private CheckBoxStyle style;
 
 	public CheckBox (String text, Skin skin) {
@@ -39,12 +40,11 @@ public class CheckBox extends TextButton {
 	public CheckBox (String text, CheckBoxStyle style) {
 		super(text, style);
 		clearChildren();
-		add(image = new Image(style.checkboxOff));
+		imageCell = add(image = new Image(style.checkboxOff));
 		Label label = getLabel();
 		add(label);
 		label.setAlignment(Align.left);
-		setWidth(getPrefWidth());
-		setHeight(getPrefHeight());
+		setSize(getPrefWidth(), getPrefHeight());
 	}
 
 	public void setStyle (ButtonStyle style) {
@@ -59,9 +59,9 @@ public class CheckBox extends TextButton {
 		return style;
 	}
 
-	public void draw (SpriteBatch batch, float parentAlpha) {
+	public void draw (Batch batch, float parentAlpha) {
 		Drawable checkbox = null;
-		if (isDisabled) {
+		if (isDisabled()) {
 			if (isChecked && style.checkboxOnDisabled != null)
 				checkbox = style.checkboxOnDisabled;
 			else
@@ -70,7 +70,7 @@ public class CheckBox extends TextButton {
 		if (checkbox == null) {
 			if (isChecked && style.checkboxOn != null)
 				checkbox = style.checkboxOn;
-			else if (isOver() && style.checkboxOver != null && !isDisabled)
+			else if (isOver() && style.checkboxOver != null && !isDisabled())
 				checkbox = style.checkboxOver;
 			else
 				checkbox = style.checkboxOff;
@@ -81,6 +81,10 @@ public class CheckBox extends TextButton {
 
 	public Image getImage () {
 		return image;
+	}
+
+	public Cell getImageCell () {
+		return imageCell;
 	}
 
 	/** The style for a select box, see {@link CheckBox}.

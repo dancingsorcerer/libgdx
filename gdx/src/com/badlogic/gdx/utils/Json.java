@@ -17,6 +17,7 @@
 package com.badlogic.gdx.utils;
 
 import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.utils.JsonValue.PrettyPrintSettings;
 import com.badlogic.gdx.utils.JsonWriter.OutputType;
 import com.badlogic.gdx.utils.ObjectMap.Entry;
 import com.badlogic.gdx.utils.ObjectMap.Values;
@@ -40,7 +41,7 @@ import java.util.List;
 import java.util.Map;
 
 /** Reads/writes Java objects to/from JSON, automatically. See the wiki for usage:
- * https://code.google.com/p/libgdx/wiki/JsonParsing
+ * https://github.com/libgdx/libgdx/wiki/Reading-%26-writing-JSON
  * @author Nathan Sweet */
 public class Json {
 	private static final boolean debug = false;
@@ -49,6 +50,7 @@ public class Json {
 	private String typeName = "class";
 	private boolean usePrototypes = true;
 	private OutputType outputType;
+	private boolean quoteLongValues = false;
 	private final ObjectMap<Class, ObjectMap<String, FieldMetadata>> typeToFields = new ObjectMap();
 	private final ObjectMap<String, Class> tagToClass = new ObjectMap();
 	private final ObjectMap<Class, String> classToTag = new ObjectMap();
@@ -71,6 +73,11 @@ public class Json {
 
 	public void setOutputType (OutputType outputType) {
 		this.outputType = outputType;
+	}
+
+	/** When true, quotes Long, BigDecimal and BigInteger types to prevent truncation in languages like JavaScript and PHP. */
+	public void setQuoteLongValues (boolean quoteLongValues) {
+		this.quoteLongValues = quoteLongValues;
 	}
 
 	public void addClassTag (String tag, Class type) {
@@ -219,6 +226,7 @@ public class Json {
 		if (!(writer instanceof JsonWriter)) writer = new JsonWriter(writer);
 		this.writer = (JsonWriter)writer;
 		this.writer.setOutputType(outputType);
+		this.writer.setQuoteLongValues(quoteLongValues);
 	}
 
 	public JsonWriter getWriter () {
@@ -498,7 +506,7 @@ public class Json {
 			}
 
 			if (value instanceof ObjectMap) {
-				if (knownType == null) knownType = OrderedMap.class;
+				if (knownType == null) knownType = ObjectMap.class;
 				writeObjectStart(actualType, knownType);
 				for (Entry entry : ((ObjectMap<?, ?>)value).entries()) {
 					writer.name(convertToString(entry.key));
@@ -521,6 +529,10 @@ public class Json {
 
 			if (ClassReflection.isAssignableFrom(Enum.class, actualType)) {
 				if (knownType == null || !knownType.equals(actualType)) {
+
+					// Ensures that enums with specific implementations (abstract logic) serialize correctly
+					if (actualType.getEnumConstants() == null) actualType = actualType.getSuperclass();
+
 					writeObjectStart(actualType, null);
 					writer.name("value");
 					writer.value(value);
@@ -735,7 +747,7 @@ public class Json {
 		Class type = object.getClass();
 		ObjectMap<String, FieldMetadata> fields = typeToFields.get(type);
 		if (fields == null) fields = cacheFields(type);
-		for (JsonValue child = jsonMap.child(); child != null; child = child.next()) {
+		for (JsonValue child = jsonMap.child; child != null; child = child.next) {
 			FieldMetadata metadata = fields.get(child.name());
 			if (metadata == null) {
 				if (ignoreUnknownFields) {
@@ -814,11 +826,13 @@ public class Json {
 			String className = typeName == null ? null : jsonData.getString(typeName, null);
 			if (className != null) {
 				jsonData.remove(typeName);
-				try {
-					type = (Class<T>)ClassReflection.forName(className);
-				} catch (ReflectionException ex) {
-					type = tagToClass.get(className);
-					if (type == null) throw new SerializationException(ex);
+				type = tagToClass.get(className);
+				if (type == null) {
+					try {
+						type = (Class<T>)ClassReflection.forName(className);
+					} catch (ReflectionException ex) {
+						throw new SerializationException(ex);
+					}
 				}
 			}
 
@@ -826,7 +840,7 @@ public class Json {
 			if (type != null) {
 				if (type == String.class || type == Integer.class || type == Boolean.class || type == Float.class
 					|| type == Long.class || type == Double.class || type == Short.class || type == Byte.class
-					|| type == Character.class || type.isEnum()) {
+					|| type == Character.class || ClassReflection.isAssignableFrom(Enum.class, type)) {
 					return readValue("value", type, jsonData);
 				}
 
@@ -842,7 +856,7 @@ public class Json {
 
 				if (object instanceof HashMap) {
 					HashMap result = (HashMap)object;
-					for (JsonValue child = jsonData.child(); child != null; child = child.next())
+					for (JsonValue child = jsonData.child; child != null; child = child.next)
 						result.put(child.name(), readValue(elementType, null, child));
 					return (T)result;
 				}
@@ -853,7 +867,7 @@ public class Json {
 
 			if (object instanceof ObjectMap) {
 				ObjectMap result = (ObjectMap)object;
-				for (JsonValue child = jsonData.child(); child != null; child = child.next())
+				for (JsonValue child = jsonData.child; child != null; child = child.next)
 					result.put(child.name(), readValue(elementType, null, child));
 				return (T)result;
 			}
@@ -869,13 +883,13 @@ public class Json {
 		if (jsonData.isArray()) {
 			if ((type == null || type == Object.class) || ClassReflection.isAssignableFrom(Array.class, type)) {
 				Array newArray = (type == null || type == Object.class) ? new Array() : (Array)newInstance(type);
-				for (JsonValue child = jsonData.child(); child != null; child = child.next())
+				for (JsonValue child = jsonData.child; child != null; child = child.next)
 					newArray.add(readValue(elementType, null, child));
 				return (T)newArray;
 			}
 			if (ClassReflection.isAssignableFrom(List.class, type)) {
 				List newArray = (type == null || type.isInterface()) ? new ArrayList() : (List)newInstance(type);
-				for (JsonValue child = jsonData.child(); child != null; child = child.next())
+				for (JsonValue child = jsonData.child; child != null; child = child.next)
 					newArray.add(readValue(elementType, null, child));
 				return (T)newArray;
 			}
@@ -884,7 +898,7 @@ public class Json {
 				if (elementType == null) elementType = componentType;
 				Object newArray = ArrayReflection.newInstance(componentType, jsonData.size);
 				int i = 0;
-				for (JsonValue child = jsonData.child(); child != null; child = child.next())
+				for (JsonValue child = jsonData.child; child != null; child = child.next)
 					ArrayReflection.set(newArray, i++, readValue(elementType, null, child));
 				return (T)newArray;
 			}
@@ -896,10 +910,10 @@ public class Json {
 				if (type == null || type == float.class || type == Float.class) return (T)(Float)jsonData.asFloat();
 				if (type == int.class || type == Integer.class) return (T)(Integer)jsonData.asInt();
 				if (type == long.class || type == Long.class) return (T)(Long)jsonData.asLong();
-				if (type == double.class || type == Double.class) return (T)(Double)(double)jsonData.asFloat();
-				if (type == String.class) return (T)Float.toString(jsonData.asFloat());
-				if (type == short.class || type == Short.class) return (T)(Short)(short)jsonData.asInt();
-				if (type == byte.class || type == Byte.class) return (T)(Byte)(byte)jsonData.asInt();
+				if (type == double.class || type == Double.class) return (T)(Double)jsonData.asDouble();
+				if (type == String.class) return (T)jsonData.asString();
+				if (type == short.class || type == Short.class) return (T)(Short)jsonData.asShort();
+				if (type == byte.class || type == Byte.class) return (T)(Byte)jsonData.asByte();
 			} catch (NumberFormatException ignored) {
 			}
 			jsonData = new JsonValue(jsonData.asString());
@@ -944,7 +958,7 @@ public class Json {
 		return String.valueOf(object);
 	}
 
-	private Object newInstance (Class type) {
+	protected Object newInstance (Class type) {
 		try {
 			return ClassReflection.newInstance(type);
 		} catch (Exception ex) {
@@ -955,9 +969,14 @@ public class Json {
 				return constructor.newInstance();
 			} catch (SecurityException ignored) {
 			} catch (ReflectionException ignored) {
-				if (type.isEnum()) {
+
+				if (ClassReflection.isAssignableFrom(Enum.class, type)) {
+
+					if (type.getEnumConstants() == null) type = type.getSuperclass();
+
 					return type.getEnumConstants()[0];
 				}
+
 				if (type.isArray())
 					throw new SerializationException("Encountered JSON object when expected array of type: " + type.getName(), ex);
 				else if (ClassReflection.isMemberClass(type) && !ClassReflection.isStaticClass(type))
@@ -985,6 +1004,14 @@ public class Json {
 
 	public String prettyPrint (String json, int singleLineColumns) {
 		return new JsonReader().parse(json).prettyPrint(outputType, singleLineColumns);
+	}
+
+	public String prettyPrint (Object object, PrettyPrintSettings settings) {
+		return prettyPrint(toJson(object), settings);
+	}
+
+	public String prettyPrint (String json, PrettyPrintSettings settings) {
+		return new JsonReader().parse(json).prettyPrint(settings);
 	}
 
 	static private class FieldMetadata {

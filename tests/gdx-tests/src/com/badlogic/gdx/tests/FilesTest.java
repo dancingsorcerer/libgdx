@@ -21,11 +21,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.util.Arrays;
 
 import com.badlogic.gdx.Application.ApplicationType;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
-import com.badlogic.gdx.graphics.GL10;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -136,6 +136,16 @@ public class FilesTest extends GdxTest {
 				StreamUtils.closeQuietly(in);
 			}
 
+			try {
+				byte[] testBytes = Gdx.files.local("test.txt").readBytes();
+				if (Arrays.equals("test".getBytes(), testBytes))
+					message += "Read into byte array success\n";
+				else
+					fail();
+			} catch (Throwable e) {
+				message += "Couldn't read localstorage/test.txt\n" + e.getMessage() + "\n";
+			}
+
 			if (!Gdx.files.local("test.txt").delete()) message += "Couldn't delete localstorage/test.txt";
 		}
 		try {
@@ -151,7 +161,7 @@ public class FilesTest extends GdxTest {
 
 	private void testClasspath () throws IOException {
 		// no classpath support on ios
-		if(Gdx.app.getType() == ApplicationType.iOS) return;
+		if (Gdx.app.getType() == ApplicationType.iOS) return;
 		FileHandle handle = Gdx.files.classpath("com/badlogic/gdx/utils/arial-15.png");
 		if (!handle.exists()) fail();
 		if (handle.isDirectory()) fail();
@@ -376,7 +386,7 @@ public class FilesTest extends GdxTest {
 		if (handle.delete()) fail();
 		if (handle.list().length != 0) fail();
 		if (handle.child("meow").exists()) fail();
-		if (handle.parent().exists()) fail();
+		if (!handle.parent().exists()) fail();
 		try {
 			handle.read().close();
 			fail();
@@ -440,14 +450,14 @@ public class FilesTest extends GdxTest {
 	private void fail () {
 		throw new RuntimeException();
 	}
-	
-	private void fail(String msg) {
+
+	private void fail (String msg) {
 		throw new RuntimeException(msg);
 	}
 
 	@Override
 	public void render () {
-		Gdx.gl.glClear(GL10.GL_COLOR_BUFFER_BIT);
+		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 		batch.begin();
 		font.drawMultiLine(batch, message, 20, Gdx.graphics.getHeight() - 20);
 		batch.end();
@@ -458,10 +468,4 @@ public class FilesTest extends GdxTest {
 		batch.dispose();
 		font.dispose();
 	}
-
-	@Override
-	public boolean needsGL20 () {
-		return true;
-	}
-
 }

@@ -44,6 +44,7 @@ public class TextureLoader extends AsynchronousAssetLoader<Texture, TextureLoade
 		TextureData data;
 		Texture texture;
 	};
+
 	TextureLoaderInfo info = new TextureLoaderInfo();
 
 	public TextureLoader (FileHandleResolver resolver) {
@@ -76,15 +77,14 @@ public class TextureLoader extends AsynchronousAssetLoader<Texture, TextureLoade
 			}
 		} else {
 			info.data = parameter.textureData;
-			if (!info.data.isPrepared()) info.data.prepare();
 			info.texture = parameter.texture;
 		}
+		if (!info.data.isPrepared()) info.data.prepare();
 	}
 
 	@Override
 	public Texture loadSync (AssetManager manager, String fileName, FileHandle file, TextureParameter parameter) {
-		if (info == null)
-			return null;
+		if (info == null) return null;
 		Texture texture = info.texture;
 		if (texture != null) {
 			texture.load(info.data);
